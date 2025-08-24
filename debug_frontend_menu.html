@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Frontend Menu - Domos Kost</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .debug-section { background: #fff; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .result { background: #f8f9fa; padding: 15px; margin: 10px 0; border-left: 4px solid #007bff; border-radius: 4px; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .warning { border-left-color: #ffc107; background: #fff3cd; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; max-height: 200px; overflow-y: auto; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+        .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .status-good { background: #28a745; }
+        .status-bad { background: #dc3545; }
+        .role-test { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
+        .role-test:hover { background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug Frontend Menu & Sidebar</h1>
+    
+    <div class="debug-section">
+        <h2>🔍 LocalStorage Check</h2>
+        <button onclick="checkLocalStorage()">Check User Data</button>
+        <button onclick="clearLocalStorage()">Clear All Data</button>
+        <div id="localStorage-result" class="result"></div>
+    </div>
+
+    <div class="grid">
+        <div class="debug-section">
+            <h2>🔐 Test Login & Data</h2>
+            <div id="quick-login">
+                <div class="role-test" onclick="testLogin('pelita', 'admin123', 'Pemilik')">
+                    👑 Login as Pemilik (pelita)
+                </div>
+                <div class="role-test" onclick="testLogin('jhon', 'staff123', 'Koordinator')">
+                    👨‍💼 Login as Koordinator (jhon)
+                </div>
+                <div class="role-test" onclick="testLogin('diana', 'laundry123', 'Petugas Laundry')">
+                    🧺 Login as Petugas Laundry (diana)
+                </div>
+                <div class="role-test" onclick="testLogin('thika', 'penghuni123', 'Penghuni')">
+                    🏠 Login as Penghuni (thika)
+                </div>
+            </div>
+            <div id="login-test-result" class="result"></div>
+        </div>
+
+        <div class="debug-section">
+            <h2>📋 Menu Generation Test</h2>
+            <button onclick="testMenuGeneration()">Test Menu for Current User</button>
+            <button onclick="testAllRoleMenus()">Test All Role Menus</button>
+            <div id="menu-test-result" class="result"></div>
+        </div>
+    </div>
+
+    <div class="debug-section">
+        <h2>🌐 Frontend App Status</h2>
+        <button onclick="checkReactApp()">Check React App</button>
+        <button onclick="checkRouterStatus()">Check Router Status</button>
+        <button onclick="simulateNavigation()">Simulate Navigation</button>
+        <div id="app-status-result" class="result"></div>
+    </div>
+
+    <div class="debug-section">
+        <h2>🚨 Browser Console Errors</h2>
+        <button onclick="checkConsoleErrors()">Check Console Errors</button>
+        <div id="console-result" class="result"></div>
+        <div class="result warning">
+            <strong>Manual Check:</strong>
+            <ol>
+                <li>Buka DevTools (F12)</li>
+                <li>Lihat tab Console</li>
+                <li>Cari error messages (merah)</li>
+                <li>Screenshot jika ada error</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+
+        function checkLocalStorage() {
+            const resultDiv = document.getElementById('localStorage-result');
+            
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            const debugToken = localStorage.getItem('debug_token');
+            
+            let userData = null;
+            try {
+                userData = user ? JSON.parse(user) : null;
+            } catch (e) {
+                userData = 'PARSE ERROR';
+            }
+
+            resultDiv.innerHTML = `
+                <h3>LocalStorage Data Check</h3>
+                <p><span class="status-indicator ${token ? 'status-good' : 'status-bad'}"></span><strong>Token:</strong> ${token ? 'Present' : 'Missing'}</p>
+                <p><span class="status-indicator ${user ? 'status-good' : 'status-bad'}"></span><strong>User:</strong> ${user ? 'Present' : 'Missing'}</p>
+                <p><span class="status-indicator ${userData?.role ? 'status-good' : 'status-bad'}"></span><strong>Role:</strong> ${userData?.role || 'Not Found'}</p>
+                <p><strong>Nama:</strong> ${userData?.nama_lengkap || 'Not Found'}</p>
+                
+                ${token ? `<div><strong>Token Preview:</strong><br><pre>${token.substring(0, 50)}...</pre></div>` : ''}
+                ${user ? `<div><strong>User Data:</strong><br><pre>${user}</pre></div>` : ''}
+            `;
+            
+            resultDiv.className = (token && user && userData?.role) ? 'result success' : 'result error';
+        }
+
+        function clearLocalStorage() {
+            localStorage.clear();
+            alert('LocalStorage cleared! Try login again.');
+            checkLocalStorage();
+        }
+
+        async function testLogin(username, password, roleTitle) {
+            const resultDiv = document.getElementById('login-test-result');
+            resultDiv.innerHTML = `<p>Testing login: ${roleTitle} (${username})...</p>`;
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Simulate what frontend does
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                }
+                
+                resultDiv.innerHTML = `
+                    <h3>Login Test: ${roleTitle}</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Success:</strong> ${data.success ? '✅ YES' : '❌ NO'}</p>
+                    <p><strong>Role:</strong> ${data.user?.role || 'N/A'}</p>
+                    <p><strong>Name:</strong> ${data.user?.nama_lengkap || 'N/A'}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                resultDiv.className = data.success ? 'result success' : 'result error';
+                
+                // Auto-check localStorage after login
+                setTimeout(checkLocalStorage, 500);
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>Login Error: ${roleTitle}</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        function testMenuGeneration() {
+            const resultDiv = document.getElementById('menu-test-result');
+            
+            const user = localStorage.getItem('user');
+            let userData = null;
+            
+            try {
+                userData = user ? JSON.parse(user) : null;
+            } catch (e) {
+                resultDiv.innerHTML = `
+                    <h3>Menu Generation Error</h3>
+                    <p>Failed to parse user data from localStorage</p>
+                `;
+                resultDiv.className = 'result error';
+                return;
+            }
+            
+            if (!userData) {
+                resultDiv.innerHTML = `
+                    <h3>No User Data</h3>
+                    <p>Please login first</p>
+                `;
+                resultDiv.className = 'result warning';
+                return;
+            }
+            
+            const menuItems = getMenuItems(userData.role);
+            
+            resultDiv.innerHTML = `
+                <h3>Menu Generation for Role: ${userData.role}</h3>
+                <p><strong>User:</strong> ${userData.nama_lengkap}</p>
+                <p><strong>Menu Items Count:</strong> ${menuItems.length}</p>
+                <div><strong>Menu Items:</strong></div>
+                <pre>${JSON.stringify(menuItems, null, 2)}</pre>
+            `;
+            resultDiv.className = menuItems.length > 0 ? 'result success' : 'result error';
+        }
+
+        function testAllRoleMenus() {
+            const resultDiv = document.getElementById('menu-test-result');
+            
+            const roles = ['pemilik', 'koordinator', 'pengawas_kost', 'petugas_laundry', 'petugas_kebersihan', 'petugas_keamanan', 'penghuni'];
+            
+            let results = [];
+            
+            roles.forEach(role => {
+                const menuItems = getMenuItems(role);
+                results.push({
+                    role: role,
+                    count: menuItems.length,
+                    items: menuItems
+                });
+            });
+            
+            resultDiv.innerHTML = `
+                <h3>All Role Menu Test</h3>
+                <pre>${JSON.stringify(results, null, 2)}</pre>
+            `;
+            resultDiv.className = 'result';
+        }
+
+        function getMenuItems(role) {
+            // Simulate Sidebar component logic
+            if (['pemilik', 'koordinator', 'pengawas_kost', 'petugas_kebersihan', 'petugas_keamanan'].includes(role)) {
+                return [
+                    { name: 'Dashboard', href: '/admin', icon: 'Home' },
+                    { name: 'Data Penghuni', href: '/admin/penghuni', icon: 'Users' },
+                    { name: 'Data Kamar', href: '/admin/kamar', icon: 'DoorOpen' },
+                    { name: 'Tagihan & Pembayaran', href: '/admin/tagihan', icon: 'CreditCard' },
+                    { name: 'Order Laundry', href: '/admin/laundry', icon: 'Droplets' },
+                    { name: 'Laporan Keuangan', href: '/admin/laporan', icon: 'BarChart3' },
+                    { name: 'Notifikasi', href: '/admin/notifikasi', icon: 'Bell' },
+                    { name: 'Pengaturan', href: '/admin/pengaturan', icon: 'Settings' },
+                ];
+            } else if (role === 'petugas_laundry') {
+                return [
+                    { name: 'Dashboard', href: '/laundry', icon: 'Home' },
+                    { name: 'Order Baru', href: '/laundry/order-baru', icon: 'Package' },
+                    { name: 'Dalam Proses', href: '/laundry/proses', icon: 'Droplets' },
+                    { name: 'Riwayat Selesai', href: '/laundry/selesai', icon: 'ClipboardList' },
+                ];
+            } else if (role === 'penghuni') {
+                return [
+                    { name: 'Dashboard', href: '/penghuni', icon: 'Home' },
+                    { name: 'Tagihan Saya', href: '/penghuni/tagihan', icon: 'FileText' },
+                    { name: 'Laundry Saya', href: '/penghuni/laundry', icon: 'Droplets' },
+                    { name: 'Riwayat Pembayaran', href: '/penghuni/riwayat', icon: 'Calendar' },
+                    { name: 'Profil Saya', href: '/penghuni/profil', icon: 'UserCircle' },
+                ];
+            }
+            
+            return [];
+        }
+
+        function checkReactApp() {
+            const resultDiv = document.getElementById('app-status-result');
+            
+            resultDiv.innerHTML = `
+                <h3>React App Status Check</h3>
+                <p><strong>Frontend URL:</strong> ${window.location.origin}</p>
+                <p><strong>Current Path:</strong> ${window.location.pathname}</p>
+                <p><strong>Expected Frontend:</strong> http://localhost:3000</p>
+                <p><strong>Expected Backend:</strong> http://localhost:8000</p>
+                
+                <div class="result warning">
+                    <strong>Instructions:</strong>
+                    <ol>
+                        <li>Make sure React app is running: <code>npm run dev</code></li>
+                        <li>Go to: <code>http://localhost:3000</code></li>
+                        <li>Login and check if sidebar appears</li>
+                        <li>Open DevTools → Elements tab</li>
+                        <li>Look for sidebar/menu elements</li>
+                    </ol>
+                </div>
+            `;
+        }
+
+        function checkRouterStatus() {
+            const resultDiv = document.getElementById('app-status-result');
+            
+            resultDiv.innerHTML = `
+                <h3>Router Status</h3>
+                <p><strong>Current URL:</strong> ${window.location.href}</p>
+                <p><strong>Hash:</strong> ${window.location.hash || 'None'}</p>
+                <p><strong>Search:</strong> ${window.location.search || 'None'}</p>
+                
+                <div class="result warning">
+                    <strong>Expected Routes After Login:</strong>
+                    <ul>
+                        <li>Pemilik/Koordinator/Pengawas → <code>/admin</code></li>
+                        <li>Petugas Laundry → <code>/laundry</code></li>
+                        <li>Penghuni → <code>/penghuni</code></li>
+                    </ul>
+                </div>
+            `;
+        }
+
+        function simulateNavigation() {
+            const resultDiv = document.getElementById('app-status-result');
+            
+            const user = localStorage.getItem('user');
+            let userData = null;
+            
+            try {
+                userData = user ? JSON.parse(user) : null;
+            } catch (e) {
+                userData = null;
+            }
+            
+            if (!userData) {
+                resultDiv.innerHTML = `
+                    <h3>Navigation Simulation</h3>
+                    <p class="error">No user data found. Please login first.</p>
+                `;
+                return;
+            }
+            
+            const roleRedirects = {
+                'pemilik': '/admin',
+                'koordinator': '/admin',
+                'pengawas_kost': '/admin',
+                'petugas_laundry': '/laundry',
+                'petugas_kebersihan': '/admin',
+                'petugas_keamanan': '/admin',
+                'penghuni': '/penghuni'
+            };
+            
+            const expectedPath = roleRedirects[userData.role] || '/admin';
+            
+            resultDiv.innerHTML = `
+                <h3>Navigation Simulation</h3>
+                <p><strong>Current User:</strong> ${userData.nama_lengkap}</p>
+                <p><strong>Role:</strong> ${userData.role}</p>
+                <p><strong>Expected Path:</strong> ${expectedPath}</p>
+                <p><strong>Frontend URL:</strong> http://localhost:3000${expectedPath}</p>
+                
+                <button onclick="window.open('http://localhost:3000${expectedPath}', '_blank')">
+                    Open Dashboard in New Tab
+                </button>
+            `;
+        }
+
+        function checkConsoleErrors() {
+            const resultDiv = document.getElementById('console-result');
+            
+            // This is limited, but we can provide guidance
+            resultDiv.innerHTML = `
+                <h3>Console Error Check</h3>
+                <p>This tool can't directly access console errors from here.</p>
+                
+                <div class="result warning">
+                    <strong>Manual Steps:</strong>
+                    <ol>
+                        <li>Go to: <code>http://localhost:3000</code></li>
+                        <li>Press <strong>F12</strong> to open DevTools</li>
+                        <li>Click <strong>Console</strong> tab</li>
+                        <li>Login and navigate to dashboard</li>
+                        <li>Look for red error messages</li>
+                        <li>Common errors to look for:
+                            <ul>
+                                <li>Network errors (API calls failing)</li>
+                                <li>Component errors (React rendering issues)</li>
+                                <li>Router errors (Navigation issues)</li>
+                                <li>Authentication errors (Token issues)</li>
+                            </ul>
+                        </li>
+                    </ol>
+                </div>
+            `;
+        }
+
+        // Auto-run checks on page load
+        window.onload = function() {
+            checkLocalStorage();
+        };
+    </script>
+</body>
+</html>

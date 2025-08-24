@@ -1,0 +1,14 @@
+# INSTRUKSI SETUP DATABASE CONFIG
+# 
+# 1. Buka file: D:\domoskost\domos-kost-laravel\.env
+# 
+# 2. Cari dan ubah baris berikut:
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=domos_kost
+DB_USERNAME=root
+DB_PASSWORD=
+
+# 3. Pastikan tidak ada spasi atau karakter aneh
+# 4. Save file .env

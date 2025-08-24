@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Test Menu Access - Domos Kost</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .section { background: #fff; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .result { background: #f8f9fa; padding: 15px; margin: 10px 0; border-left: 4px solid #007bff; border-radius: 4px; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .warning { border-left-color: #ffc107; background: #fff3cd; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        button.success { background: #28a745; }
+        button.danger { background: #dc3545; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; max-height: 200px; overflow-y: auto; }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #007bff; }
+        .menu-item { padding: 10px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
+        .menu-item:hover { background: #f0f0f0; }
+        .menu-item.success { border-color: #28a745; background: #d4edda; }
+        .menu-item.error { border-color: #dc3545; background: #f8d7da; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Test Menu Access & Navigation</h1>
+    
+    <div class="section">
+        <h2>📊 Current Auth Status</h2>
+        <button onclick="checkAuthStatus()">🔄 Check Auth Status</button>
+        <button onclick="clearAuth()">🗑️ Clear Auth</button>
+        <div id="auth-status" class="result"></div>
+    </div>
+
+    <div class="grid">
+        <div class="section">
+            <h2>🔐 Quick Login Test</h2>
+            <div>
+                <button onclick="testLogin('pelita', 'admin123')">👑 Login as Pemilik</button>
+                <button onclick="testLogin('jhon', 'staff123')">👨‍💼 Login as Koordinator</button>
+                <button onclick="testLogin('diana', 'laundry123')">🧺 Login as Petugas Laundry</button>
+                <button onclick="testLogin('thika', 'penghuni123')">🏠 Login as Penghuni</button>
+            </div>
+            <div id="login-result" class="result"></div>
+        </div>
+
+        <div class="section">
+            <h2>📋 Menu Generation Test</h2>
+            <button onclick="testMenuGeneration()">🎯 Test Current User Menu</button>
+            <button onclick="testAllRoleMenus()">📊 Test All Role Menus</button>
+            <div id="menu-result" class="result"></div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🌐 Navigation Test</h2>
+        <div id="navigation-test">
+            <p>Login first to see available menu items</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🚨 Common Issues & Solutions</h2>
+        <div class="result warning">
+            <h3>If menu items don't appear:</h3>
+            <ol>
+                <li><strong>Check user role:</strong> Make sure role matches expected values</li>
+                <li><strong>Check localStorage:</strong> Verify token and user data exist</li>
+                <li><strong>Check console errors:</strong> Look for JavaScript errors</li>
+                <li><strong>Check network:</strong> Verify API calls are successful</li>
+                <li><strong>Check ProtectedRoute:</strong> Ensure role permissions are correct</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+        const FRONTEND_BASE = 'http://localhost:3000';
+
+        function checkAuthStatus() {
+            const resultDiv = document.getElementById('auth-status');
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            let userData = null;
+            
+            try {
+                userData = user ? JSON.parse(user) : null;
+            } catch (e) {
+                userData = null;
+            }
+
+            resultDiv.innerHTML = `
+                <h3>🔍 Auth Status Check</h3>
+                <p><strong>Token:</strong> ${token ? '✅ Present' : '❌ Missing'}</p>
+                <p><strong>User Data:</strong> ${user ? '✅ Present' : '❌ Missing'}</p>
+                <p><strong>User Name:</strong> ${userData?.nama_lengkap || 'Not Found'}</p>
+                <p><strong>User Role:</strong> ${userData?.role || 'Not Found'}</p>
+                <p><strong>Frontend URL:</strong> ${FRONTEND_BASE}</p>
+                <p><strong>Backend URL:</strong> ${API_BASE}</p>
+                ${userData ? `<pre>${JSON.stringify(userData, null, 2)}</pre>` : ''}
+            `;
+            
+            resultDiv.className = (token && userData) ? 'result success' : 'result error';
+        }
+
+        async function testLogin(username, password) {
+            const resultDiv = document.getElementById('login-result');
+            resultDiv.innerHTML = `<p>🔐 Testing login: ${username}...</p>`;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    resultDiv.innerHTML = `
+                        <h3>✅ Login Successful!</h3>
+                        <p><strong>Name:</strong> ${data.user.nama_lengkap}</p>
+                        <p><strong>Role:</strong> ${data.user.role}</p>
+                        <p><strong>Token:</strong> ${data.token.substring(0, 30)}...</p>
+                        <button onclick="testMenuGeneration()">🎯 Test Menu</button>
+                        <button onclick="openDashboard()">📊 Open Dashboard</button>
+                    `;
+                    resultDiv.className = 'result success';
+                    
+                    // Auto update auth status
+                    setTimeout(checkAuthStatus, 500);
+                    setTimeout(updateNavigationTest, 500);
+                } else {
+                    resultDiv.innerHTML = `
+                        <h3>❌ Login Failed</h3>
+                        <p><strong>Error:</strong> ${data.message}</p>
+                    `;
+                    resultDiv.className = 'result error';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>🚨 Connection Error</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        function clearAuth() {
+            localStorage.clear();
+            alert('✅ Auth cleared!');
+            checkAuthStatus();
+            document.getElementById('login-result').innerHTML = '<p>Auth cleared. Login again to test.</p>';
+            document.getElementById('menu-result').innerHTML = '';
+            document.getElementById('navigation-test').innerHTML = '<p>Login first to see available menu items</p>';
+        }
+
+        function testMenuGeneration() {
+            const resultDiv = document.getElementById('menu-result');
+            const user = localStorage.getItem('user');
+            let userData = null;
+            
+            try {
+                userData = user ? JSON.parse(user) : null;
+            } catch (e) {
+                userData = null;
+            }
+            
+            if (!userData) {
+                resultDiv.innerHTML = `
+                    <h3>❌ No User Data</h3>
+                    <p>Please login first</p>
+                `;
+                resultDiv.className = 'result error';
+                return;
+            }
+            
+            const menuItems = getMenuItems(userData.role);
+            
+            resultDiv.innerHTML = `
+                <h3>📋 Menu for Role: ${userData.role}</h3>
+                <p><strong>User:</strong> ${userData.nama_lengkap}</p>
+                <p><strong>Menu Items Count:</strong> ${menuItems.length}</p>
+                <div><strong>Menu Items:</strong></div>
+                <pre>${JSON.stringify(menuItems, null, 2)}</pre>
+            `;
+            resultDiv.className = menuItems.length > 0 ? 'result success' : 'result error';
+        }
+
+        function testAllRoleMenus() {
+            const resultDiv = document.getElementById('menu-result');
+            
+            const roles = ['pemilik', 'koordinator', 'pengawas_kost', 'petugas_laundry', 'petugas_kebersihan', 'petugas_keamanan', 'penghuni'];
+            
+            let results = [];
+            
+            roles.forEach(role => {
+                const menuItems = getMenuItems(role);
+                results.push({
+                    role: role,
+                    count: menuItems.length,
+                    items: menuItems.map(item => item.name)
+                });
+            });
+            
+            resultDiv.innerHTML = `
+                <h3>📊 All Role Menu Test</h3>
+                <pre>${JSON.stringify(results, null, 2)}</pre>
+            `;
+            resultDiv.className = 'result';
+        }
+
+        function getMenuItems(role) {
+            // Simulate Sidebar component logic
+            if (['pemilik', 'koordinator', 'pengawas_kost', 'petugas_kebersihan', 'petugas_keamanan'].includes(role)) {
+                return [
+                    { name: 'Dashboard', href: '/admin', icon: 'Home' },
+                    { name: 'Data Penghuni', href: '/admin/penghuni', icon: 'Users' },
+                    { name: 'Data Kamar', href: '/admin/kamar', icon: 'DoorOpen' },
+                    { name: 'Tagihan & Pembayaran', href: '/admin/tagihan', icon: 'CreditCard' },
+                    { name: 'Order Laundry', href: '/admin/laundry', icon: 'Droplets' },
+                    { name: 'Laporan Keuangan', href: '/admin/laporan', icon: 'BarChart3' },
+                    { name: 'Notifikasi', href: '/admin/notifikasi', icon: 'Bell' },
+                    { name: 'Pengaturan', href: '/admin/pengaturan', icon: 'Settings' },
+                ];
+            } else if (role === 'petugas_laundry') {
+                return [
+                    { name: 'Dashboard', href: '/laundry', icon: 'Home' },
+                    { name: 'Order Baru', href: '/laundry/order-baru', icon: 'Package' },
+                    { name: 'Dalam Proses', href: '/laundry/proses', icon: 'Droplets' },
+                    { name: 'Riwayat Selesai', href: '/laundry/selesai', icon: 'ClipboardList' },
+                ];
+            } else if (role === 'penghuni') {
+                return [
+                    { name: 'Dashboard', href: '/penghuni', icon: 'Home' },
+                    { name: 'Tagihan Saya', href: '/penghuni/tagihan', icon: 'FileText' },
+                    { name: 'Laundry Saya', href: '/penghuni/laundry', icon: 'Droplets' },
+                    { name: 'Riwayat Pembayaran', href: '/penghuni/riwayat', icon: 'Calendar' },
+                    { name: 'Profil Saya', href: '/penghuni/profil', icon: 'UserCircle' },
+                ];
+            }
+            
+            return [];
+        }
+
+        function updateNavigationTest() {
+            const user = localStorage.getItem('user');
+            let userData = null;
+            
+            try {
+                userData = user ? JSON.parse(user) : null;
+            } catch (e) {
+                userData = null;
+            }
+            
+            if (!userData) {
+                document.getElementById('navigation-test').innerHTML = '<p>Login first to see available menu items</p>';
+                return;
+            }
+            
+            const menuItems = getMenuItems(userData.role);
+            
+            const navigationDiv = document.getElementById('navigation-test');
+            navigationDiv.innerHTML = `
+                <h3>🌐 Navigation Test for ${userData.nama_lengkap} (${userData.role})</h3>
+                <p><strong>Available Menu Items:</strong></p>
+                <div>
+                    ${menuItems.map(item => `
+                        <div class="menu-item" onclick="testNavigation('${item.href}')">
+                            <strong>${item.name}</strong> → ${item.href}
+                        </div>
+                    `).join('')}
+                </div>
+                <button onclick="openDashboard()" class="success">🎯 Open Dashboard</button>
+            `;
+        }
+
+        function testNavigation(path) {
+            const fullUrl = `${FRONTEND_BASE}${path}`;
+            console.log(`Testing navigation to: ${fullUrl}`);
+            
+            // Try to open in new tab
+            window.open(fullUrl, '_blank');
+            
+            // Show result
+            alert(`Testing navigation to: ${fullUrl}\nCheck the new tab for results.`);
+        }
+
+        function openDashboard() {
+            const user = localStorage.getItem('user');
+            let userData = null;
+            
+            try {
+                userData = user ? JSON.parse(user) : null;
+            } catch (e) {
+                userData = null;
+            }
+            
+            if (!userData) {
+                alert('❌ No user data found. Please login first.');
+                return;
+            }
+            
+            const roleRedirects = {
+                'pemilik': '/admin',
+                'koordinator': '/admin',
+                'pengawas_kost': '/admin',
+                'petugas_laundry': '/laundry',
+                'petugas_kebersihan': '/admin',
+                'petugas_keamanan': '/admin',
+                'penghuni': '/penghuni'
+            };
+            
+            const dashboardPath = roleRedirects[userData.role] || '/admin';
+            const fullUrl = `${FRONTEND_BASE}${dashboardPath}`;
+            
+            console.log(`Opening dashboard: ${fullUrl}`);
+            window.open(fullUrl, '_blank');
+        }
+
+        // Auto check on page load
+        window.onload = function() {
+            checkAuthStatus();
+            updateNavigationTest();
+        };
+    </script>
+</body>
+</html>

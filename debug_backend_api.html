@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Backend API - Domos Kost</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        .test-section { background: #fff; padding: 20px; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .result { background: #f8f9fa; padding: 15px; margin: 10px 0; border-left: 4px solid #007bff; border-radius: 4px; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .warning { border-left-color: #ffc107; background: #fff3cd; }
+        button { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+        button.danger { background: #dc3545; }
+        button.success { background: #28a745; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; max-height: 300px; overflow-y: auto; }
+        input, select { padding: 8px; margin: 5px; border: 1px solid #ddd; border-radius: 4px; width: 200px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .status-online { background: #28a745; }
+        .status-offline { background: #dc3545; }
+        .status-unknown { background: #6c757d; }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug Backend API - Domos Kost</h1>
+    
+    <div class="test-section">
+        <h2>📊 Server Status</h2>
+        <div id="server-status"></div>
+        <button onclick="checkServerStatus()">Cek Server Status</button>
+        <button onclick="checkDatabaseConnection()">Test Database</button>
+    </div>
+
+    <div class="grid">
+        <div class="test-section">
+            <h2>🔐 Test Login API</h2>
+            <div>
+                <select id="login-role" onchange="updateCredentials()">
+                    <option value="pelita,admin123">Pemilik (pelita)</option>
+                    <option value="jhon,staff123">Koordinator (jhon)</option>
+                    <option value="dedi,staff123">Pengawas (dedi)</option>
+                    <option value="diana,laundry123">Petugas Laundry (diana)</option>
+                    <option value="kristiani,kebersihan123">Kebersihan (kristiani)</option>
+                    <option value="arman,keamanan123">Keamanan (arman)</option>
+                    <option value="thika,penghuni123">Penghuni (thika)</option>
+                </select><br>
+                <input type="text" id="username" placeholder="Username" value="pelita">
+                <input type="password" id="password" placeholder="Password" value="admin123">
+                <button onclick="testLogin()">Test Login</button>
+            </div>
+            <div id="login-result" class="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Test Dashboard API</h2>
+            <div>
+                <button onclick="testDashboard('admin')">Test Admin Dashboard</button>
+                <button onclick="testDashboard('penghuni')">Test Penghuni Dashboard</button>
+                <button onclick="testDashboard('laundry')">Test Laundry Dashboard</button>
+            </div>
+            <div id="dashboard-result" class="result"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 Raw API Tests</h2>
+        <div>
+            <button onclick="testEndpoint('/api/test')">Test /api/test</button>
+            <button onclick="testEndpoint('/api/health')">Test /api/health</button>
+            <button class="danger" onclick="testEndpoint('/api/auth/login', 'POST', {username:'pelita',password:'admin123'})">Direct Login Test</button>
+        </div>
+        <div id="raw-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📱 Frontend Check</h2>
+        <div>
+            <button onclick="testFrontendConnection()">Test Frontend → Backend</button>
+            <button onclick="checkCORS()">Check CORS</button>
+            <button onclick="checkLocalStorage()">Check LocalStorage</button>
+        </div>
+        <div id="frontend-result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+        let authToken = null;
+
+        function updateCredentials() {
+            const select = document.getElementById('login-role');
+            const [username, password] = select.value.split(',');
+            document.getElementById('username').value = username;
+            document.getElementById('password').value = password;
+        }
+
+        async function checkServerStatus() {
+            const resultDiv = document.getElementById('server-status');
+            resultDiv.innerHTML = '<p>Checking server status...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}`, { method: 'GET' });
+                const statusClass = response.ok ? 'success' : 'error';
+                const statusIcon = response.ok ? 'status-online' : 'status-offline';
+                
+                resultDiv.innerHTML = `
+                    <div class="result ${statusClass}">
+                        <h3><span class="status-indicator ${statusIcon}"></span>Laravel Server Status</h3>
+                        <p><strong>Status Code:</strong> ${response.status}</p>
+                        <p><strong>Status Text:</strong> ${response.statusText}</p>
+                        <p><strong>URL:</strong> ${API_BASE}</p>
+                        <p><strong>Time:</strong> ${new Date().toLocaleTimeString()}</p>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <h3><span class="status-indicator status-offline"></span>Server Offline</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Solution:</strong> Jalankan "php artisan serve" di terminal</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function checkDatabaseConnection() {
+            const resultDiv = document.getElementById('server-status');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/health`);
+                const data = await response.json();
+                
+                const statusClass = data.success ? 'success' : 'error';
+                resultDiv.innerHTML += `
+                    <div class="result ${statusClass}">
+                        <h3>Database Connection</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML += `
+                    <div class="result error">
+                        <h3>Database Error</h3>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('login-result');
+            
+            resultDiv.innerHTML = '<p>Testing login...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.token) {
+                    authToken = data.token;
+                    localStorage.setItem('debug_token', authToken);
+                }
+                
+                resultDiv.innerHTML = `
+                    <h3>Login Test: ${username}</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Success:</strong> ${data.success ? '✅ YES' : '❌ NO'}</p>
+                    <p><strong>Role:</strong> ${data.user?.role || 'N/A'}</p>
+                    <p><strong>Nama:</strong> ${data.user?.nama_lengkap || 'N/A'}</p>
+                    ${data.token ? `<p><strong>Token:</strong> ${data.token.substring(0, 30)}...</p>` : ''}
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                resultDiv.className = data.success ? 'result success' : 'result error';
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>Login Error</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testDashboard(type) {
+            const resultDiv = document.getElementById('dashboard-result');
+            const token = authToken || localStorage.getItem('debug_token');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<p class="error">❌ Please login first to get token</p>';
+                resultDiv.className = 'result error';
+                return;
+            }
+            
+            resultDiv.innerHTML = `<p>Testing ${type} dashboard API...</p>`;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/dashboard/${type}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>Dashboard API: ${type}</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Success:</strong> ${data.success ? '✅ YES' : '❌ NO'}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                resultDiv.className = data.success ? 'result success' : 'result error';
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>Dashboard Error: ${type}</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testEndpoint(endpoint, method = 'GET', body = null) {
+            const resultDiv = document.getElementById('raw-result');
+            resultDiv.innerHTML = `<p>Testing ${method} ${endpoint}...</p>`;
+            
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h3>${method} ${endpoint}</h3>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                resultDiv.className = response.ok ? 'result success' : 'result error';
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h3>Error: ${endpoint}</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                `;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        async function testFrontendConnection() {
+            const resultDiv = document.getElementById('frontend-result');
+            resultDiv.innerHTML = '<p>Testing frontend connection...</p>';
+            
+            const tests = [
+                { name: 'Server Reachable', test: () => fetch(`${API_BASE}`) },
+                { name: 'API Base', test: () => fetch(`${API_BASE}/api`) },
+                { name: 'CORS Preflight', test: () => fetch(`${API_BASE}/api/test`, { method: 'OPTIONS' }) }
+            ];
+            
+            let results = [];
+            
+            for (const { name, test } of tests) {
+                try {
+                    const response = await test();
+                    results.push(`✅ ${name}: ${response.status}`);
+                } catch (error) {
+                    results.push(`❌ ${name}: ${error.message}`);
+                }
+            }
+            
+            resultDiv.innerHTML = `
+                <h3>Frontend Connection Tests</h3>
+                <pre>${results.join('\n')}</pre>
+            `;
+            resultDiv.className = 'result';
+        }
+
+        function checkCORS() {
+            const resultDiv = document.getElementById('frontend-result');
+            resultDiv.innerHTML = `
+                <h3>CORS Configuration Check</h3>
+                <p><strong>Frontend URL:</strong> ${window.location.origin}</p>
+                <p><strong>Backend URL:</strong> ${API_BASE}</p>
+                <p><strong>Cross-Origin:</strong> ${window.location.origin !== API_BASE ? '✅ Yes' : '❌ No'}</p>
+                <p><strong>Protocol:</strong> ${window.location.protocol}</p>
+            `;
+        }
+
+        function checkLocalStorage() {
+            const resultDiv = document.getElementById('frontend-result');
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            resultDiv.innerHTML = `
+                <h3>LocalStorage Check</h3>
+                <p><strong>Token:</strong> ${token ? '✅ Present' : '❌ Missing'}</p>
+                <p><strong>User:</strong> ${user ? '✅ Present' : '❌ Missing'}</p>
+                ${token ? `<p><strong>Token Preview:</strong> ${token.substring(0, 30)}...</p>` : ''}
+                ${user ? `<pre>${user}</pre>` : ''}
+            `;
+        }
+
+        // Auto-run basic checks on page load
+        window.onload = function() {
+            checkServerStatus();
+        };
+    </script>
+</body>
+</html>
